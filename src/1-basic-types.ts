@@ -106,6 +106,7 @@ const direction2: Direction2 = Direction2.Up;
 
 // Typescript also provides some handy special types eg.: (more on them later)
 type AsyncFunction = (...args: any[]) => Promise<any>;
+type TruthyValue = NonNullable<string | null | undefined | false | 0 | "" | {}>;
 
 // Any mix and match of the above types is possible:
 
@@ -138,3 +139,7 @@ type MyBetterComplexObject = {
   data: Data[];
   callback: CallbackFn;
 };
+
+// You can also access the type of object properties:
+type MyComplexObjectColor = MyComplexObject["color"];
+//   ^?
