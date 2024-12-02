@@ -1,0 +1,1 @@
+// show that you can create variables from extends S ? infer R
