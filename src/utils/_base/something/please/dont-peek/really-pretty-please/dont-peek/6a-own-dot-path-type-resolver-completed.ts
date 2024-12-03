@@ -1,4 +1,4 @@
-import type { Equal, Expect } from "./utils/type-check";
+import type { Equal, Expect } from "../../../../../../type-check";
 
 /*
   Task 1: Implement own dot path object type resolver. Similar to lodash's get method
@@ -16,7 +16,11 @@ import type { Equal, Expect } from "./utils/type-check";
   type name = DotPathType<data, 'user.name'>; // Tosin
 */
 
-type DotPathType<T, P> = unknown;
+type DotPathType<T, K extends string> = K extends keyof T
+  ? T[K]
+  : K extends `${infer Start}.${infer Rest}`
+  ? DotPathType<T[Start & keyof T], Rest>
+  : T;
 
 /*
   Task 2: Implement own type that would gather in union all possible paths in the input object
@@ -34,7 +38,13 @@ type DotPathType<T, P> = unknown;
   type paths = DotPaths<Data>; // 'user.name' | 'user.age' | 'user.location.country' | 'user.location.continent' | 'user' | 'user.location'
 */
 
-export type AllDotPaths<T> = unknown;
+export type AllDotPaths<T> = T extends Record<string, unknown>
+  ? {
+      [K in keyof T]-?: K extends string // same as K in keyof Required<T> instead of -?:
+        ? `${K}` | `${K}.${AllDotPaths<T[K]>}`
+        : never;
+    }[keyof T]
+  : never;
 
 /* 
   Task 3:
@@ -58,7 +68,25 @@ export type AllDotPaths<T> = unknown;
   type joker = GetTypeAtPath<Data, '$whatever'>; // Data
 */
 
-export type DotPathTypeWithUndefined<T, P> = unknown;
+type DotPathTypeWithUndefined<
+  T,
+  Path extends string,
+  Undefined = never
+> = Path extends `$${string}`
+  ? T
+  : Path extends `${infer First}.${infer Rest}`
+  ? First extends keyof T
+    ? T[First] extends infer D
+      ? DotPathTypeWithUndefined<
+          Exclude<D, undefined>,
+          Rest,
+          D extends undefined ? undefined : Undefined
+        >
+      : never
+    : never
+  : Path extends keyof T
+  ? T[Path] | Undefined
+  : never;
 
 /*
 
@@ -136,32 +164,35 @@ type DataWithUndefined = {
 };
 
 type cases3 = [
-  Expect<Equal<GetTypeAtPath<DotPathTypeWithUndefined, "hello">, "world">>,
+  Expect<Equal<DotPathTypeWithUndefined<DataWithUndefined, "hello">, "world">>,
   Expect<
     Equal<
-      GetTypeAtPath<DotPathTypeWithUndefined, "foo.bar.count">,
+      DotPathTypeWithUndefined<DataWithUndefined, "foo.bar.count">,
       6 | undefined
     >
   >,
   Expect<
     Equal<
-      GetTypeAtPath<DotPathTypeWithUndefined, "foo.bar">,
+      DotPathTypeWithUndefined<DataWithUndefined, "foo.bar">,
       { value: "foobar"; count: 6 } | undefined
     >
   >,
   Expect<
     Equal<
-      GetTypeAtPath<DotPathTypeWithUndefined, "foo.bar.value">,
+      DotPathTypeWithUndefined<DataWithUndefined, "foo.bar.value">,
       "foobar" | undefined
     >
   >,
   Expect<
     Equal<
-      GetTypeAtPath<DotPathTypeWithUndefined, "foo.optional">,
+      DotPathTypeWithUndefined<DataWithUndefined, "foo.optional">,
       string | undefined
     >
   >,
   Expect<
-    Equal<GetTypeAtPath<DotPathTypeWithUndefined, "biz.baz.value">, "bizbaz">
+    Equal<
+      DotPathTypeWithUndefined<DataWithUndefined, "biz.baz.value">,
+      "bizbaz"
+    >
   >
 ];

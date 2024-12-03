@@ -1,33 +1,32 @@
-import type { Equal, Expect } from "./utils/type-check";
+import type { Equal, Expect } from "../../../../../../type-check";
 
-/*
-  Task 1: 
-  Implement a generic type for Columns that would allow us to define columns for a table in type-safe way
-  You have three types of columns: text, currency, and image
-  Each of the columns properties will be dependent on the key and cell model
-  Our goal is to make sure that during writing the columns we can't make mistakes like using a wrong key
-  or wrong cell model type for column methods,
+type DotPathType<
+  T,
+  Path extends string,
+  Undefined = never
+> = Path extends `$${string}`
+  ? T
+  : Path extends `${infer First}.${infer Rest}`
+  ? First extends keyof T
+    ? T[First] extends infer D
+      ? DotPathType<
+          Exclude<D, undefined>,
+          Rest,
+          D extends undefined ? undefined : Undefined
+        >
+      : never
+    : never
+  : Path extends keyof T
+  ? T[Path] | Undefined
+  : never;
 
-  also user can provide its own custom key starting with '$' (dollar sign) 
-  which would allow to use the whole data model inside cell
-
-  @example
-  type DataModel = {
-    user: {
-      name: string;
-      age: number;
-    }
-    balance: number;
-  } 
-
-  const columns: Column<DataModel>[] = [
-    { key: 'user.name', label: 'Name', type: 'text', transform: (value) => value.toUpperCase() }, (here value is string)
-    { key: 'balance', label: 'Balance', type: 'currency', currency: 'USD', color: 'green', transform: (value) => value * 2 } (here value is number)
-    { key: '$someRandomKey', label: 'Full Data', type: 'text', transform: (value) => `${value.user.name} - ${value.balance}` } (here value is DataModel)
-    // error: key 'user.location' doesn't exist in DataModel
-    { key: 'user.location', label: 'Location', type: 'text', transform: (value) => value.toUpperCase() }
-  ]
-*/
+type AllDotPaths<T> = T extends Record<string, unknown>
+  ? {
+      [K in keyof T]-?: K extends string
+        ? `${K}` | `${K}.${AllDotPaths<T[K]>}`
+        : never;
+    }[keyof T]
+  : never;
 
 type CommonColumnType<Key extends string, SortAttr extends string = never> = {
   key: Key;
@@ -53,7 +52,28 @@ type ImageColumnType<CellModel> = {
   transform?: (value: CellModel) => string;
 };
 
-type Column<Data, SortAttr> = unknown;
+type ColumnType<
+  Key extends string,
+  CellModel,
+  SortAttr extends string = never
+> = CommonColumnType<Key, SortAttr> &
+  (
+    | SimpleColumnType<CellModel>
+    | CurrencyColumnType<CellModel>
+    | ImageColumnType<CellModel>
+  );
+
+type Column<
+  Data,
+  SortAttr extends string = never,
+  $Key = AllDotPaths<Data> | `$${string}`
+> = $Key extends string
+  ? ColumnType<
+      $Key,
+      $Key extends `$${string}` ? Data : DotPathType<Data, $Key>,
+      SortAttr
+    >
+  : never;
 
 /*
 
@@ -105,8 +125,8 @@ const _testColumns1 = [
   {
     key: "product.price",
     type: "currency",
-    color: (value) => (value > 100 ? "red" : "green"),
-    transform: (value) => value * 2,
+    color: (value = 0) => (value > 100 ? "red" : "green"),
+    transform: (value = 0) => value * 2,
     currency: "EUR",
     label: "City ID",
     sortAttr: "subscribed",
