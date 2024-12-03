@@ -43,6 +43,9 @@ type OptionalExampleObject = Partial<ExampleObject>;
 type RequiredExampleObject = Required<ExampleObject>;
 //   ^?
 
+type Excluded = Exclude<"a" | "b", "a">;
+//   ^?
+
 type Colors = "red" | "green" | "blue";
 type CapitalizedColors = Capitalize<Colors>;
 //   ^?
