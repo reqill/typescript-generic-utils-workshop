@@ -7,7 +7,7 @@ type ArrayElement = ArrayType[number];
 // And like this for objects
 type ObjectType = {
   name: string;
-  age: number;
+  age?: number;
   isStudent: boolean;
 };
 type ObjectElement = ObjectType[keyof ObjectType];
@@ -23,7 +23,7 @@ type MappedObject = {
 
 // This come in handy when you would want to recreate object but change the type of the values
 type ChangeValues<T, V> = {
-  [Key in keyof T]: V;
+  [Key in keyof T]-?: V;
 };
 type ChangeValuesType = ChangeValues<ObjectType, string>;
 //   ^?
